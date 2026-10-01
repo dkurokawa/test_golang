@@ -3,6 +3,7 @@ package main
 import (
     "database/sql"
     "fmt"
+    "os"
     "github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -14,22 +15,17 @@ func main() {
 }
 
 func setupRelation(relation_map map[string]string) *gin.Engine {
-	fmt.Println("comes")
     r := gin.Default()
-	
+
+	// Serve each hand from the loaded table, so the routes follow the DB
+	// instead of a hard-coded copy of it.
 	for strong, weak := range relation_map {
-        fmt.Println("key: %s, value: %d\n", strong, weak)
+        fmt.Printf("key: %s, value: %s\n", strong, weak)
+        weak := weak
+        r.GET("/janken/"+strong, func(c *gin.Context) {
+            c.String(200, weak)
+        })
     }
-    
-	r.GET("/janken/gu", func(c *gin.Context) {
-        c.String(200, "choki")
-    })
-    r.GET("/janken/choki", func(c *gin.Context) {
-        c.String(200, "pa")
-    })
-    r.GET("/janken/pa", func(c *gin.Context) {
-        c.String(200, "gu")
-    })
     r.GET("/janken", func(c *gin.Context) {
         c.String(200, "usage: /janken/[gu,choki,pa] to see relation")
     })
@@ -39,7 +35,11 @@ func setupRelation(relation_map map[string]string) *gin.Engine {
 func loadRelation() map[string]string {
 
 	//sql.Open("mysql", "user:password@host/dbname")
-	db, err := sql.Open("mysql", "root:admin@tcp(localhost:63306)/janken")
+	dsn := os.Getenv("JANKEN_DSN")
+	if dsn == "" {
+		dsn = "root:admin@tcp(localhost:63306)/janken"
+	}
+	db, err := sql.Open("mysql", dsn)
 
 	if err != nil {
 		panic(err.Error())
